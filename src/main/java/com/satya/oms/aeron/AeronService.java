@@ -133,9 +133,7 @@ public class AeronService implements AutoCloseable {
         final long   filledQty    = orderDecoder.filledQty();
         final long   remainingQty = orderDecoder.remainingQty();
 
-        // Capture raw string BEFORE iterating fills (iterator is destructive)
-        final String rawMessage   = orderDecoder.toString();
-
+        // Read fills first
         List<FillRecord> fills = new ArrayList<>();
         OrderDecoder.FillsDecoder fillsDecoder = orderDecoder.fills();
         while (fillsDecoder.hasNext()) {
@@ -145,6 +143,10 @@ public class AeronService implements AutoCloseable {
                     fillsDecoder.fillQty(),
                     fillsDecoder.fillPrice()));
         }
+
+        // Now rewind and capture the full SBE string representation
+        // (toString() internally rewinds and re-reads everything cleanly)
+        final String rawMessage = orderDecoder.sbeRewind().toString();
 
         // Dispatch to EDT
         final List<FillRecord> fillsCopy = List.copyOf(fills);

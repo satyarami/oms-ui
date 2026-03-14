@@ -10,9 +10,10 @@ import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableColumnModel;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
-
 /**
  * Order Blotter: flat JTable where each order row is immediately followed
  * by its fill sub-rows (indented, different background colour).
@@ -117,6 +118,25 @@ public class OrderBlotterPanel extends JPanel {
         table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.setFocusable(false);
+        ToolTipManager.sharedInstance().registerComponent(table);
+
+        // Double-click on Raw Message column → popup dialog with full message
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    int row = table.rowAtPoint(e.getPoint());
+                    int col = table.columnAtPoint(e.getPoint());
+                    if (row < 0 || row >= model.getRowCount()) return;
+                    Row r = model.getRow(row);
+                    // open popup on any double-click on an ORDER row (col 9 or any col)
+                    if (r.type == RowType.ORDER) {
+                        String raw = (String) model.getValueAt(row, 9);
+                        showRawMessageDialog(raw, (String) model.getValueAt(row, 0));
+                    }
+                }
+            }
+        });
 
         // custom header renderer
         table.getTableHeader().setDefaultRenderer(new DefaultTableCellRenderer() {
@@ -195,6 +215,60 @@ public class OrderBlotterPanel extends JPanel {
     }
 
     // ------------------------------------------------------------------
+    // Raw message popup
+    // ------------------------------------------------------------------
+    private void showRawMessageDialog(String raw, String orderId) {
+        Window owner = SwingUtilities.getWindowAncestor(this);
+        JDialog dialog = new JDialog(owner instanceof Frame ? (Frame) owner : null,
+                "Raw SBE Message — " + orderId, false);
+
+        // Format the raw string: break at | and , for readability
+        String formatted = raw == null || raw.isBlank()
+                ? "(No execution report received yet)"
+                : raw.replace("|", "\n  | ").replace(",", ",\n    ");
+
+        JTextArea textArea = new JTextArea(formatted);
+        textArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 13));
+        textArea.setEditable(false);
+        textArea.setLineWrap(true);
+        textArea.setWrapStyleWord(false);
+        textArea.setBackground(new Color(30, 35, 45));
+        textArea.setForeground(new Color(200, 220, 255));
+        textArea.setCaretColor(Color.WHITE);
+        textArea.setBorder(new EmptyBorder(10, 12, 10, 12));
+
+        JScrollPane scroll = new JScrollPane(textArea);
+        scroll.setPreferredSize(new Dimension(780, 320));
+        scroll.setBorder(BorderFactory.createLineBorder(new Color(70, 80, 100)));
+
+        // Copy to clipboard button
+        JButton copyBtn = new JButton("Copy to Clipboard");
+        copyBtn.addActionListener(e -> {
+            textArea.selectAll();
+            textArea.copy();
+            copyBtn.setText("Copied ✓");
+            Timer t = new Timer(1500, ev -> copyBtn.setText("Copy to Clipboard"));
+            t.setRepeats(false);
+            t.start();
+        });
+
+        JButton closeBtn = new JButton("Close");
+        closeBtn.addActionListener(e -> dialog.dispose());
+
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 6));
+        buttons.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(70, 80, 100)));
+        buttons.add(copyBtn);
+        buttons.add(closeBtn);
+
+        dialog.setLayout(new BorderLayout());
+        dialog.add(scroll,   BorderLayout.CENTER);
+        dialog.add(buttons,  BorderLayout.SOUTH);
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+    }
+
+    // ------------------------------------------------------------------
     // Cell renderer
     // ------------------------------------------------------------------
     private class BlotterCellRenderer extends DefaultTableCellRenderer {
@@ -247,10 +321,20 @@ public class OrderBlotterPanel extends JPanel {
                 setHorizontalAlignment(LEFT);
             }
 
-            // Raw Message column — monospace, muted colour
-            if (col == 9 && r.type == RowType.ORDER) {
+            // Raw Message column — monospace, readable colour, tooltip for full text
+            if (col == 9) {
                 setFont(new Font(Font.MONOSPACED, Font.PLAIN, 11));
-                setForeground(new Color(150, 160, 175));
+                if (r.type == RowType.ORDER) {
+                    String raw = val == null ? "" : val.toString();
+                    setForeground(new Color(200, 210, 230));   // light on dark, or swap below
+                    setText(raw);
+                    setToolTipText(raw.isEmpty() ? "Awaiting execution report..." : raw);
+                } else {
+                    setText("");
+                    setToolTipText(null);
+                }
+            } else {
+                setToolTipText(null);
             }
 
             return this;
