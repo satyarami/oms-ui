@@ -133,6 +133,9 @@ public class AeronService implements AutoCloseable {
         final long   filledQty    = orderDecoder.filledQty();
         final long   remainingQty = orderDecoder.remainingQty();
 
+        // Capture raw string BEFORE iterating fills (iterator is destructive)
+        final String rawMessage   = orderDecoder.toString();
+
         List<FillRecord> fills = new ArrayList<>();
         OrderDecoder.FillsDecoder fillsDecoder = orderDecoder.fills();
         while (fillsDecoder.hasNext()) {
@@ -146,7 +149,7 @@ public class AeronService implements AutoCloseable {
         // Dispatch to EDT
         final List<FillRecord> fillsCopy = List.copyOf(fills);
         SwingUtilities.invokeLater(() ->
-                store.applyExecution(orderId, stateStr, filledQty, remainingQty, fillsCopy));
+                store.applyExecution(orderId, stateStr, filledQty, remainingQty, fillsCopy, rawMessage));
     }
 
     private static String stateString(OrderState s) {

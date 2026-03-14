@@ -35,7 +35,7 @@ public class OrderBlotterPanel extends JPanel {
     //  Blotter has unified columns; fill rows use a subset with indent on col 0
     static final String[] COLS = {
         "Order ID / Exec ID", "Symbol", "Side", "Qty", "Price",
-        "State", "Filled", "Remaining", "Time"
+        "State", "Filled", "Remaining", "Time", "Raw Message"
     };
 
     // ---- row model ----
@@ -140,7 +140,7 @@ public class OrderBlotterPanel extends JPanel {
         table.setDefaultRenderer(String.class, new BlotterCellRenderer());
 
         // column widths
-        int[] widths = {140, 70, 55, 70, 80, 90, 70, 90, 90};
+        int[] widths = {140, 70, 55, 70, 80, 90, 70, 90, 90, 420};
         TableColumnModel cm = table.getColumnModel();
         for (int i = 0; i < widths.length; i++) {
             cm.getColumn(i).setPreferredWidth(widths[i]);
@@ -173,7 +173,8 @@ public class OrderBlotterPanel extends JPanel {
                 o.getState(),
                 String.valueOf(o.getFilledQty()),
                 String.valueOf(o.getRemainingQty()),
-                o.getSubmitTime()
+                o.getSubmitTime(),
+                o.getRawMessage()
             };
             rows.add(new Row(RowType.ORDER, i, od));
 
@@ -181,14 +182,9 @@ public class OrderBlotterPanel extends JPanel {
             for (FillRecord f : o.getFills()) {
                 Object[] fd = {
                     "  ↳ exec #" + f.getExecutionId(),
-                    "",                                    // symbol (blank)
-                    "",                                    // side   (blank)
-                    String.valueOf(f.getFillQty()),
+                    "", "", String.valueOf(f.getFillQty()),
                     f.fillPriceDisplay(),
-                    "FILL",
-                    "",
-                    "",
-                    ""
+                    "FILL", "", "", "", ""
                 };
                 rows.add(new Row(RowType.FILL, i, fd));
             }
@@ -249,6 +245,12 @@ public class OrderBlotterPanel extends JPanel {
                 setHorizontalAlignment(RIGHT);
             } else {
                 setHorizontalAlignment(LEFT);
+            }
+
+            // Raw Message column — monospace, muted colour
+            if (col == 9 && r.type == RowType.ORDER) {
+                setFont(new Font(Font.MONOSPACED, Font.PLAIN, 11));
+                setForeground(new Color(150, 160, 175));
             }
 
             return this;

@@ -26,10 +26,10 @@ public class OrderStore {
     /** Called from Aeron subscriber thread; dispatches to listeners (which post to EDT). */
     public synchronized void applyExecution(long orderId, String state,
                                              long filledQty, long remainingQty,
-                                             List<FillRecord> fills) {
+                                             List<FillRecord> fills, String rawMessage) {
         OrderRecord rec = map.get(orderId);
         if (rec != null) {
-            rec.applyExecution(state, filledQty, remainingQty, fills);
+            rec.applyExecution(state, filledQty, remainingQty, fills, rawMessage);
             fireChanged(rec);
         }
     }

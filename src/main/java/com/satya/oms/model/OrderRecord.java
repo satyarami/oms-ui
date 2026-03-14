@@ -27,6 +27,7 @@ public class OrderRecord {
     private String state        = "NEW";
     private long   filledQty    = 0;
     private long   remainingQty;
+    private String rawMessage   = "";
 
     private final List<FillRecord> fills = new ArrayList<>();
 
@@ -42,10 +43,12 @@ public class OrderRecord {
 
     // ---- mutation called from EDT ----
 
-    public void applyExecution(String state, long filledQty, long remainingQty, List<FillRecord> newFills) {
+    public void applyExecution(String state, long filledQty, long remainingQty,
+                               List<FillRecord> newFills, String rawMessage) {
         this.state        = state;
         this.filledQty    = filledQty;
         this.remainingQty = remainingQty;
+        this.rawMessage   = rawMessage;
         this.fills.addAll(newFills);
     }
 
@@ -61,7 +64,8 @@ public class OrderRecord {
     public long   getRemainingQty(){ return remainingQty; }
     public String getSubmitTime()  { return submitTime; }
 
-    public List<FillRecord> getFills() { return Collections.unmodifiableList(fills); }
+    public List<FillRecord> getFills()     { return Collections.unmodifiableList(fills); }
+    public String getRawMessage()          { return rawMessage; }
 
     /** Display price as decimal (ticks / 100). */
     public String priceDisplay() {
