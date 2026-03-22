@@ -14,11 +14,16 @@
     <maven.compiler.release>17</maven.compiler.release>
     <aeron.version>1.44.1</aeron.version>
     <agrona.version>1.22.0</agrona.version>
-    <sbe.version>1.27.0</sbe.version>
     <flatlaf.version>3.4</flatlaf.version>
   </properties>
 
   <dependencies>
+    <!-- Shared SBE schema & generated codecs -->
+    <dependency>
+      <groupId>com.satya.oms</groupId>
+      <artifactId>oms-common</artifactId>
+      <version>1.0-SNAPSHOT</version>
+    </dependency>
     <!-- Aeron IPC transport -->
     <dependency>
       <groupId>io.aeron</groupId>
@@ -30,12 +35,6 @@
       <groupId>org.agrona</groupId>
       <artifactId>agrona</artifactId>
       <version>${agrona.version}</version>
-    </dependency>
-    <!-- SBE runtime + tool (codegen uses it at generate-sources phase) -->
-    <dependency>
-      <groupId>uk.co.real-logic</groupId>
-      <artifactId>sbe-all</artifactId>
-      <version>${sbe.version}</version>
     </dependency>
     <!-- Modern Swing look-and-feel -->
     <dependency>
@@ -60,68 +59,7 @@
 
   <build>
     <plugins>
-      <!-- 1) SBE code generation from order-schema.xml -->
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
-        <version>3.1.0</version>
-        <executions>
-          <execution>
-            <id>generate-sbe-code</id>
-            <phase>generate-sources</phase>
-            <goals><goal>java</goal></goals>
-            <configuration>
-              <mainClass>uk.co.real_logic.sbe.SbeTool</mainClass>
-              <systemProperties>
-                <systemProperty>
-                  <key>sbe.output.dir</key>
-                  <value>${project.build.directory}/generated-sources/sbe</value>
-                </systemProperty>
-                <systemProperty>
-                  <key>sbe.target.language</key>
-                  <value>Java</value>
-                </systemProperty>
-                <systemProperty>
-                  <key>sbe.validation.stop.on.error</key>
-                  <value>true</value>
-                </systemProperty>
-              </systemProperties>
-              <arguments>
-                <argument>${project.basedir}/src/main/resources/order-schema.xml</argument>
-              </arguments>
-              <includePluginDependencies>true</includePluginDependencies>
-            </configuration>
-          </execution>
-        </executions>
-        <dependencies>
-          <dependency>
-            <groupId>uk.co.real-logic</groupId>
-            <artifactId>sbe-all</artifactId>
-            <version>${sbe.version}</version>
-          </dependency>
-        </dependencies>
-      </plugin>
-
-      <!-- 2) Register generated SBE sources -->
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>build-helper-maven-plugin</artifactId>
-        <version>3.2.0</version>
-        <executions>
-          <execution>
-            <id>add-sbe-sources</id>
-            <phase>generate-sources</phase>
-            <goals><goal>add-source</goal></goals>
-            <configuration>
-              <sources>
-                <source>${project.build.directory}/generated-sources/sbe</source>
-              </sources>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
-      <!-- 3) Compiler -->
+      <!-- Compiler -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -131,7 +69,7 @@
         </configuration>
       </plugin>
 
-      <!-- 4) Fat-jar (runnable) -->
+      <!-- Fat-jar (runnable) -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
